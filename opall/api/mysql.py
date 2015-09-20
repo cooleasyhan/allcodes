@@ -27,4 +27,5 @@ class MySQL(object):
         '''
         Run a MySQL query.
         '''
+        print env
         fabtools.mysql.query(env.get('mysql_query_sql'))

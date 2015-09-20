@@ -1,6 +1,9 @@
 '''
 BaseCommand
 '''
+import sys
+sys.path.append("..")
+from api import env
 
 
 class BaseCommand(object):
@@ -8,7 +11,7 @@ class BaseCommand(object):
     '''BaseCommand'''
 
     def __init__(self):
-        pass
+        self.env = env
 
     def execute(self):
         '''execute'''
