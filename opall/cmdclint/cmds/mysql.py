@@ -1,8 +1,7 @@
-'''mysql'''
-import sys
-sys.path.append("..")
-from common.Command import BaseCommand
-from api import get_env, update_env, mysql
+'''mysql command'''
+
+from cmdclint.common.Command import BaseCommand
+from cmdclint.api import get_env, update_env, MySQL
 
 
 def validate_env(_paras):
@@ -33,7 +32,7 @@ class Query(BaseCommand):
 
     def execute(self):
         '''execute'''
-        mysql.query()
+        MySQL.query()
 
     def undo(self):
         '''undo'''
@@ -56,7 +55,7 @@ class CreateUser(BaseCommand):
 
     def execute(self):
         '''execute'''
-        mysql.create_user()
+        MySQL.create_user()
 
     def undo(self):
         '''undo'''

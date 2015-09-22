@@ -1,9 +1,8 @@
 '''
 BaseCommand
 '''
-import sys
-sys.path.append("..")
-from api import env
+
+from cmdclint.api import env
 
 
 class BaseCommand(object):

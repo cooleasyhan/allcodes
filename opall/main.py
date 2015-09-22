@@ -1,19 +1,26 @@
+import importlib
+m = __import__('cmdclint.cmds')
 
-m = __import__('cmds')
+from cmdclint import CmdClint
 
 
 def query():
-    mysql_query = getattr(m, 'mysql_query')
+    MySQL = getattr(m, 'MySQL')
 
-    q = mysql_query(host_string='localhost',
-                    mysql_user='root', mysql_password='root',
-                    mysql_query_sql='select * from mysql.user')
+    q = MySQL(host_string='localhost',
+              mysql_user='root', mysql_password='root',
+              mysql_query_sql='select * from mysql.user')
     print q.env
     q.execute()
 
 
 def run(conf):
-    _module = __import__(conf["module"])
+
+    conf = {"function_name": "test", "command": "MysqlQuery",
+            "module": "cmdclint.cmds",
+            "args": {"host_string": "localhost", "password": "yihan", "mysql_user": "root", "mysql_password": "root", "mysql_query_sql": "select * from mysql.user"}}
+
+    _module = importlib.import_module(conf["module"])
     _class = getattr(_module, conf["command"])
     obj = _class()
     obj.set_env(conf['args'])
@@ -25,9 +32,5 @@ def run(conf):
 
 
 if __name__ == '__main__':
-
-    conf = {"function_name": "test", "command": "mysql_query",
-            "module": "cmds",
-            "args": {"host_string": "localhost", "password": "yihan", "mysql_user": "root", "mysql_password": "root", "mysql_query_sql": "select * from mysql.user"}}
-
-    run(conf)
+    cmd_clint = CmdClint()
+    cmd_clint.server_forever()

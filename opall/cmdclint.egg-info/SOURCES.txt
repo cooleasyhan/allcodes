@@ -1,0 +1,5 @@
+setup.py
+cmdclint.egg-info/PKG-INFO
+cmdclint.egg-info/SOURCES.txt
+cmdclint.egg-info/dependency_links.txt
+cmdclint.egg-info/top_level.txt

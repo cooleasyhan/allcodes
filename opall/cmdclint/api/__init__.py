@@ -1,5 +1,7 @@
+'''Api'''
+
 from fabric.api import env
-from mysql import MySQL as mysql
+from mysql import MySQL
 
 
 def set_env(key, value):
@@ -17,4 +19,4 @@ def update_env(_dict):
     env.update(_dict)
 
 
-__all__ = ['set_env', 'get_env', 'mysql', 'env']
+__all__ = ['set_env', 'get_env', 'update_env', 'MySQL', 'env']
