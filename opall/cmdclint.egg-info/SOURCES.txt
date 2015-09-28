@@ -1,5 +1,13 @@
 setup.py
+cmdclint/__init__.py
+cmdclint/cmd_clint.py
 cmdclint.egg-info/PKG-INFO
 cmdclint.egg-info/SOURCES.txt
 cmdclint.egg-info/dependency_links.txt
 cmdclint.egg-info/top_level.txt
+cmdclint/api/__init__.py
+cmdclint/api/mysql.py
+cmdclint/cmds/__init__.py
+cmdclint/cmds/mysql.py
+cmdclint/common/Command.py
+cmdclint/common/__init__.py
