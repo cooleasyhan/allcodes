@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+# -*- coding: UTF-8 -*-
 '''mysql command'''
 
 from cmdclint.common.Command import BaseCommand

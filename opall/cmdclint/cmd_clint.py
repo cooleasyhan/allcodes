@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+# -*- coding: UTF-8 -*-
 from clint.textui import prompt, puts, colored, validators
 import importlib
 

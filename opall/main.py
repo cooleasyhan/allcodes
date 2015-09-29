@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+# -*- coding: UTF-8 -*-
 import importlib
 m = __import__('cmdclint.cmds')
 
