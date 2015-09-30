@@ -124,15 +124,14 @@ class SupervisorRPC(object):
         cnt = 3
         while cnt >= 0:
             cnt -= 1
-            process = get_process_info(name)
+            state = get_process_info(name)['state']
 
-            if state == 1:
+            if state == 10:
                 return True
-            if state == 2:
+            if state in (0, 200):
                 return False
 
-            if state in (0, -1):
-                time.sleep(5)
+            time.sleep(5)
 
 
 class SupervisorListen(object):
@@ -176,8 +175,29 @@ class SupervisorListen(object):
 
     def linsten_master_slave_process(self, master, slave, process):
         '''linsten_master_slave'''
-        cnt = 3
-        while cnt >= 0:
+        master_server = self.server_list[master]
+        slave_server = self.server_list[slave]
+
+        while True:
             # check master is alive, and the process is running
-            cnt += 1
-            master.refresh()
+
+            master_state = master_server.process_is_running(process)
+            slave_state = slave_server.process_is_running(process)
+
+            if master_state and not slave_state:
+                log.info('[%s-%s], %s is ok', master, slave, process)
+            elif not master_state and slave_state:
+                log.info(
+                    '[%s-%s], %s is running in slave', master, slave, process)
+            elif not master_state and not slave_state:
+                log.warning(
+                    '[%s-%s], %s is stoped in master and slave, \
+                    try to start slave', master, slave, process)
+                slave_server.start_process(process)
+            else:
+                log.warning(
+                    '[%s-%s], %s is running in master and slave, \
+                    try to stop slave', master, slave, process)
+                slave_server.stop_process(process)
+
+            time.sleep(10)
