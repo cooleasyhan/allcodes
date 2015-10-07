@@ -8,8 +8,10 @@ import logging
 import socket
 import time
 
+from mslisten import Alarm
+
 log = logging.getLogger(__name__)
-log.addHandler(logging.NullHandler)
+# log.addHandler(logging.NullHandler)
 
 
 class SupervisorRPC(object):
@@ -31,8 +33,8 @@ class SupervisorRPC(object):
         self.all_process_info = self.server.supervisor.getAllProcessInfo()
         log.debug(
             '[%s]-----------refresh rst begin------------', self.server_name)
-        log.debug(self.state)
-        log.debug(self.all_process_info)
+        log.debug('[%s] %s', self.server_name, str(self.state))
+        log.debug('[%s] %s', self.server_name, self.all_process_info)
         log.debug(
             '[%s]-----------refresh rst end--------------', self.server_name)
 
@@ -61,6 +63,8 @@ class SupervisorRPC(object):
             cnt -= 1
             self.refresh()
             state = self.state['statecode']
+            log.info(
+                '[%s]supervisor statecode: %s', self.server_name, str(state))
             if state == 1:
                 return True
             if state == 2:
@@ -124,9 +128,11 @@ class SupervisorRPC(object):
         cnt = 3
         while cnt >= 0:
             cnt -= 1
-            state = get_process_info(name)['state']
-
-            if state == 10:
+            state = self.get_process_info(name)['state']
+            log.info(
+                '[%s:process:%s] statecode: %s', self.server_name,
+                name, str(state))
+            if state == 20:
                 return True
             if state in (0, 200):
                 return False
@@ -138,13 +144,17 @@ class SupervisorListen(object):
 
     '''SupervisorListen'''
 
-    def __init__(self, rpc_config):
+    def __init__(self, rpc_config=None):
         '''rpc_config['name']
            rpc_config['url']
         '''
         self.server_list = dict()
-        for name, url in rpc_config:
-            self.server_list[name] = SupervisorRPC(name, url)
+        if rpc_config:
+            for name, url in rpc_config.items:
+                self.server_list[name] = SupervisorRPC(name, url)
+
+    def add_supervisor(self, supervisor):
+        self.server_list[supervisor.server_name] = supervisor
 
     def send_alarm(self, warn_msg):
         '''send_alarm'''
@@ -154,22 +164,26 @@ class SupervisorListen(object):
 
         while True:
             warn_msg = ''
-            for url, server in self.server_list:
-                log.info('[%s]check alive %s', server.server_name, url)
+            for server in self.server_list.values():
+                log.info(
+                    '[%s]check alive %s', server.server_name, server.server_url)
                 try:
                     if not server.is_alive():
-                        warn_msg += 'url %s is down' % url
+                        warn_msg += '[%s]url %s is down' % (
+                            server.server_name, server.server_url)
                 except socket.error, socket_error:
                     log.exception(socket_error)
-                    warn_msg += 'url %s is donw' % url
+                    warn_msg += '[%s] url %s is donw' % (
+                        server.server_name, server.server_url)
                 except Exception, exc:
                     log.exception(exc)
-                    warn_msg += 'url %s get unknow exception ' % url
+                    warn_msg += '[%s]url %s get unknow exception ' % (
+                        server.server_name, server.server_url)
 
             if warn_msg:
                 log.warning('warn_msg: %s', warn_msg)
                 self.send_alarm(warn_msg)
-                time.sleep(120)
+                time.sleep(10)
 
             time.sleep(10)
 
