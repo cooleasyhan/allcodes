@@ -1,6 +1,4 @@
-from alarm import Alarm
-from supervisor_listen import SupervisorListen, SupervisorRPC
+from supervisor_listen import SupervisorListen, SupervisorRPC, ALARM_QUEUE
 
 
-
-__all__ = ['SupervisorListen', 'SupervisorRPC', 'Alarm']
+__all__ = ['SupervisorListen', 'SupervisorRPC',  'ALARM_QUEUE']

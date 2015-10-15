@@ -7,11 +7,15 @@ import xmlrpclib
 import logging
 import socket
 import time
+import Queue
+import threading
 
-from mslisten import Alarm
 
 log = logging.getLogger(__name__)
 # log.addHandler(logging.NullHandler)
+
+
+ALARM_QUEUE = Queue.Queue()
 
 
 class SupervisorRPC(object):
@@ -34,7 +38,7 @@ class SupervisorRPC(object):
         log.debug(
             '[%s]-----------refresh rst begin------------', self.server_name)
         log.debug('[%s] %s', self.server_name, str(self.state))
-        log.debug('[%s] %s', self.server_name, self.all_process_info)
+        # log.debug('[%s] %s', self.server_name, self.all_process_info)
         log.debug(
             '[%s]-----------refresh rst end--------------', self.server_name)
 
@@ -91,36 +95,38 @@ class SupervisorRPC(object):
          'pid':            1}
         '''
 
-        self.refresh()
+        default = dict()
+        default['state'] = 1000
         for prc in self.all_process_info:
             if prc['name'] == name:
                 return prc
 
+        return default
+
     def process_is_running(self, name):
         '''
         STOPPED (0)
-
         The process has been stopped due to a stop request or has never been started.
+
         STARTING (10)
-
         The process is starting due to a start request.
+
         RUNNING (20)
-
         The process is running.
+
         BACKOFF (30)
-
         The process entered the STARTING state but subsequently exited too quickly to move to the RUNNING state.
+
         STOPPING (40)
-
         The process is stopping due to a stop request.
+
         EXITED (100)
-
         The process exited from the RUNNING state (expectedly or unexpectedly).
+
         FATAL (200)
-
         The process could not be started successfully.
-        UNKNOWN (1000)
 
+        UNKNOWN (1000)
         The process is in an unknown state (supervisord programming error).
 
         '''
@@ -128,6 +134,7 @@ class SupervisorRPC(object):
         cnt = 3
         while cnt >= 0:
             cnt -= 1
+            self.refresh()
             state = self.get_process_info(name)['state']
             log.info(
                 '[%s:process:%s] statecode: %s', self.server_name,
@@ -144,10 +151,11 @@ class SupervisorListen(object):
 
     '''SupervisorListen'''
 
-    def __init__(self, rpc_config=None):
+    def __init__(self, rpc_config=None, interval=60):
         '''rpc_config['name']
            rpc_config['url']
         '''
+        self.interval = interval
         self.server_list = dict()
         if rpc_config:
             for name, url in rpc_config.items:
@@ -158,6 +166,7 @@ class SupervisorListen(object):
 
     def send_alarm(self, warn_msg):
         '''send_alarm'''
+        ALARM_QUEUE.put(warn_msg)
 
     def linsten_alive(self):
         '''linsten_alive'''
@@ -169,49 +178,82 @@ class SupervisorListen(object):
                     '[%s]check alive %s', server.server_name, server.server_url)
                 try:
                     if not server.is_alive():
-                        warn_msg += '[%s]url %s is down' % (
+                        warn_msg += '(%s)url %s is down' % (
                             server.server_name, server.server_url)
                 except socket.error, socket_error:
                     log.exception(socket_error)
-                    warn_msg += '[%s] url %s is donw' % (
+                    warn_msg += '(%s) url %s is donw' % (
                         server.server_name, server.server_url)
                 except Exception, exc:
                     log.exception(exc)
-                    warn_msg += '[%s]url %s get unknow exception ' % (
+                    warn_msg += '(%s)url %s get unknow exception ' % (
                         server.server_name, server.server_url)
 
             if warn_msg:
                 log.warning('warn_msg: %s', warn_msg)
                 self.send_alarm(warn_msg)
-                time.sleep(10)
 
-            time.sleep(10)
+            time.sleep(self.interval)
 
-    def linsten_master_slave_process(self, master, slave, process):
+    def start_linsten_alive_thread(self):
+        thread = threading.Thread(target=self.linsten_alive)
+        thread.daemon = True
+        thread.start()
+        return thread
+
+    def linsten_master_slave_process(self, master, slave, process_list):
         '''linsten_master_slave'''
         master_server = self.server_list[master]
         slave_server = self.server_list[slave]
 
         while True:
-            # check master is alive, and the process is running
+            try:
+                warn_msg = ''
+                # check master is alive, and the process is running
+                for process in process_list:
+                    process_name = process.split(':')[-1:][0]
 
-            master_state = master_server.process_is_running(process)
-            slave_state = slave_server.process_is_running(process)
+                    try:
+                        master_state = master_server.process_is_running(
+                            process_name)
+                    except Exception, exc:
+                        log.exception(exc)
+                        master_state = False
+                    try:
+                        slave_state = slave_server.process_is_running(process_name)
+                    except Exception, exc:
+                        log.exception(exc)
+                        slave_state = False
 
-            if master_state and not slave_state:
-                log.info('[%s-%s], %s is ok', master, slave, process)
-            elif not master_state and slave_state:
-                log.info(
-                    '[%s-%s], %s is running in slave', master, slave, process)
-            elif not master_state and not slave_state:
-                log.warning(
-                    '[%s-%s], %s is stoped in master and slave, \
-                    try to start slave', master, slave, process)
-                slave_server.start_process(process)
-            else:
-                log.warning(
-                    '[%s-%s], %s is running in master and slave, \
-                    try to stop slave', master, slave, process)
-                slave_server.stop_process(process)
+                    if master_state and not slave_state:
+                        log.info('[%s-%s], %s is ok', master, slave, process)
+                    elif not master_state and slave_state:
+                        log.info(
+                            '[%s-%s], %s is running in slave', master, slave, process)
+                    elif not master_state and not slave_state:
+                        warn_msg += '(%s-%s), %s is stoped in master and slave, \
+                            try to start slave' % (master, slave, process)
 
-            time.sleep(10)
+                        slave_server.start_process(process)
+                    else:
+                        warn_msg += '(%s-%s), %s is running in master and slave, \
+                            try to stop slave' % (master, slave, process)
+
+                        slave_server.stop_process(process)
+            except Exception, exc:
+                log.exception(exc)
+                warn_msg += '(%s-%s), %s get unkonw error' % (
+                    master, slave, process)
+
+            if warn_msg:
+                log.warning('warn_msg: %s', warn_msg)
+                self.send_alarm(warn_msg)
+
+            time.sleep(self.interval)
+
+    def start_linsten_master_slave_thread(self, master, slave, process):
+        thread = threading.Thread(target=self.linsten_master_slave_process,
+                                  args=(master, slave, process))
+        thread.daemon = True
+        thread.start()
+        return thread
