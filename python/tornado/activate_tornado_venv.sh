@@ -1,1 +1,0 @@
-. ~/.venv/tornado/bin/activate
