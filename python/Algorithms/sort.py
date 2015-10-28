@@ -3,7 +3,7 @@ import random
 import time
 
 LIST_A = list()
-for i in range(10000):
+for i in range(20):
     LIST_A.append(random.randint(1, 100))
 
 
@@ -21,7 +21,39 @@ class TimeIt(object):
         return wrapped
 
 
+class Bar(object):
+
+    @classmethod
+    def show(cls, datas):
+        import matplotlib
+        import time
+        import matplotlib.pyplot as plt
+        from numpy import array
+
+        matplotlib.use('TKAgg')
+
+        def animated_barplot():
+            # http://www.scipy.org/Cookbook/Matplotlib/Animations
+
+            x = array(datas[0])
+            print x
+            rects = plt.bar(range(len(x)), x,  align='center')
+            for i in range(1, len(datas)):
+                print datas[i]
+                x = array(datas[i])
+                for rect, h in zip(rects, x):
+                    rect.set_height(h)
+                fig.canvas.draw()
+                time.sleep(1)
+
+        fig = plt.figure()
+        win = fig.canvas.manager.window
+        win.after(100, animated_barplot)
+        plt.show()
+
+
 class BaseSort(object):
+    steps = list()
 
     '''BaseSort'''
 
@@ -58,11 +90,15 @@ class BaseSort(object):
 
     def main(self):
         '''main'''
+
         list_a = []
         list_a = self.prepare_list()
         self.sort(list_a)
         assert self.is_sorted(list_a)
-        # self.show(list_a)
+        self.show(list_a)
+        print BaseSort.steps
+        if len(BaseSort.steps) > 1:
+            Bar.show(BaseSort.steps)
 
 
 class SelectSort(BaseSort):
@@ -70,6 +106,7 @@ class SelectSort(BaseSort):
     '''TestSort'''
     @TimeIt()
     def sort(self, list_a):
+
         length = len(list_a)
         if length == 0:
             return
@@ -85,6 +122,7 @@ class SelectSort(BaseSort):
                     min_index = j
 
             self.exch(list_a, i, min_index)
+            BaseSort.steps.append(list(list_a))
 
 
 class InsertionSort(BaseSort):
@@ -177,5 +215,10 @@ class ShellSort2(BaseSort):
 if __name__ == '__main__':
     for sort in (SelectSort(), InsertionSort(), InsertionSort2(),
                  ShellSort(), ShellSort2()):
-        sort.main()
+        # sort.main()
         pass
+
+    #sort = SelectSort()
+    # sort.main()
+
+    test()
