@@ -60,3 +60,29 @@ class DoublyLinkedList(object):
             node = node.next
 
         return data
+
+
+def main():
+    link_list = DoublyLinkedList()
+    link_list.add_node(Node, '1')
+
+    link_list.add_node(Node, '2')
+    node = link_list.add_node(Node, '3')
+    node2 = link_list.add_node(Node, '4')
+    link_list.insert_node(Node, '44', node, node2)
+    link_list.add_node(Node, '5')
+
+    link_list.add_node(Node, '1')
+
+    link_list.add_node(Node, '2')
+    node = link_list.add_node(Node, '3')
+    node2 = link_list.add_node(Node, '4')
+    node3 = link_list.insert_node(Node, '44', node, node2)
+    link_list.add_node(Node, '5')
+
+    link_list.remove_node(node3)
+
+    print link_list.get_nodes_data()
+
+if __name__ == '__main__':
+    main()
